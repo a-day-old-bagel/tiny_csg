@@ -112,12 +112,12 @@ bool frustum_intersects_box(const frustum_t& frustum, const box_t& box) {
     */
 }
 
-std::vector<brush_t*> world_t::query_frustum(
+csg_vector(brush_t*) world_t::query_frustum(
     const glm::mat4& view_projection
 )
 {
     frustum_t frustum = make_frustum_from_matrix(view_projection);
-    std::vector<brush_t*> result;
+    csg_vector(brush_t*) result;
     brush_t *b = first();
     while (b) {
         if (frustum_intersects_box(frustum, b->box))

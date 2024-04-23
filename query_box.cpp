@@ -7,8 +7,8 @@ static bool box_intersects_box(const box_t& box, const box_t& other_box) {
            glm::all(glm::greaterThanEqual(box.max, other_box.min));
 }
 
-std::vector<brush_t*> world_t::query_box(const box_t& box) {
-    std::vector<brush_t*> result;
+csg_vector(brush_t*) world_t::query_box(const box_t& box) {
+    csg_vector(brush_t*) result;
     brush_t *b = first();
     while (b) {
         if (box_intersects_box(b->box, box))

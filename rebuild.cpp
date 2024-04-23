@@ -1,5 +1,11 @@
 #include "csg_private.hpp"
 
+#ifdef custom_stl_allocator
+#define csg_map(K, T) std::map<K, T, std::less<K>, custom_stl_allocator(std::pair<const K, T>)>
+#else
+#define csg_map(K, T) std::map<K, T>
+#endif
+
 #include <map>
 #include <array>
 #include <algorithm>
@@ -24,6 +30,7 @@ enum relation_t {
 };
 
 struct edge_t {
+    replace_new_delete
     face_t *faces[2];
 };
 
@@ -78,7 +85,7 @@ static relation_t test(vertex_t* vertex, brush_t* brush) {
 }
 
 static relation_t test(fragment_t* fragment, face_t* face) {
-    std::map<relation_t, int> count;
+    csg_map(relation_t, int) count;
     count[RELATION_INSIDE]  = 0;
     count[RELATION_ALIGNED] = 0;
     count[RELATION_OUTSIDE] = 0;
@@ -194,7 +201,7 @@ static bool try_make_vertex(face_t *f0, face_t *f1, face_t *f2, vertex_t& v) {
 static void order_vertices(face_t* face) {
     // use the info we have on the vertices (the planes that meet in the vertex)
     // to order the vertices properly without any floating point calculations
-    std::vector<vertex_t> unsorted = move(face->vertices);
+    csg_vector(vertex_t) unsorted = move(face->vertices);
     face->vertices.clear();
 
     auto curr = unsorted.begin();
@@ -279,7 +286,7 @@ static void split(fragment_t* fragment, face_t* splitter, fragment_t* front, fra
     // splits fragment into front and back piece w.r.t. face
     // call only if test(fragment, face) == RELATION_SPLIT
 
-    std::map<relation_t, fragment_t*> pieces;
+    csg_map(relation_t, fragment_t*) pieces;
     pieces[RELATION_FRONT] = front;
     pieces[RELATION_BACK]  = back;
     for (auto& kv: pieces) {
@@ -328,7 +335,7 @@ static void split(fragment_t* fragment, face_t* splitter, fragment_t* front, fra
     }
 }
 
-static std::vector<fragment_t> carve(
+static csg_vector(fragment_t) carve(
     fragment_t fragment,
     brush_t* brush,
     size_t face_index
@@ -338,7 +345,7 @@ static std::vector<fragment_t> carve(
     // classified as being inside/outside/aligned or reverse aligned 
     // with the given brush. it does this by pushing the fragment down
     // the convex bsp-tree (just the list of faces) of the given brush
-    std::vector<fragment_t> pieces;
+    csg_vector(fragment_t) pieces;
 
     // recursion termination case
     if (face_index >= brush->faces.size()) {
@@ -428,7 +435,7 @@ static void rebuild_fragments(brush_t *brush) {
                 face.fragments.erase(face.fragments.begin() + fragment_index);
 
                 fragment.relation = RELATION_INSIDE;
-                std::vector<fragment_t> pieces = carve(std::move(fragment), intersecting, 0);
+                csg_vector(fragment_t) pieces = carve(std::move(fragment), intersecting, 0);
                 for (auto& piece: pieces) {
                     bool keep_piece = true;
                     switch(piece.relation) {
@@ -461,7 +468,7 @@ static void rebuild_fragments(brush_t *brush) {
     }
 }
 
-std::set<brush_t*> world_t::rebuild() {
+csg_set(brush_t*) world_t::rebuild() {
     // todo: parallelize per-brush work
 
     for (brush_t* brush: need_face_and_box_rebuild) {
@@ -483,7 +490,7 @@ std::set<brush_t*> world_t::rebuild() {
         rebuild_fragments(brush);
     }
 
-    std::set<brush_t*> rebuilt_brushes = need_fragment_rebuild;
+    csg_set(brush_t*) rebuilt_brushes = need_fragment_rebuild;
 
     need_face_and_box_rebuild.clear();
     need_fragment_rebuild.clear();

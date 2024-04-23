@@ -2,7 +2,19 @@
 
 #ifndef module_private
 #define module_private private
-#endif 
+#endif
+
+#ifndef replace_new_delete
+#define replace_new_delete
+#endif
+
+#ifdef custom_stl_allocator
+#define csg_vector(T) std::vector<T, custom_stl_allocator(T)>
+#define csg_set(T) std::set<T, std::less<T>, custom_stl_allocator(T)>
+#else
+#define csg_vector(T) std::vector<T>
+#define csg_set(T) std::set<T>
+#endif
 
 #include <vector>
 #include <set>
@@ -19,16 +31,19 @@ struct brush_t;
 struct fragment_t;
 
 struct plane_t {
+    replace_new_delete
     glm::vec3 normal;
     float     offset;
 };
 
 struct ray_t {
+    replace_new_delete
     glm::vec3 origin;
     glm::vec3 direction;
 };
 
 struct ray_hit_t {
+    replace_new_delete
     brush_t    *brush;
     face_t     *face;
     fragment_t *fragment;
@@ -37,6 +52,7 @@ struct ray_hit_t {
 };
 
 struct box_t {
+    replace_new_delete
     glm::vec3 min, max;
 };
 
@@ -47,17 +63,20 @@ volume_operation_t make_fill_operation(volume_t with);
 volume_operation_t make_convert_operation(volume_t from, volume_t to);
 
 struct vertex_t {
+    replace_new_delete
     face_t    *faces[3];
     glm::vec3 position;
 };
 
 struct triangle_t {
+    replace_new_delete
     int i,j,k;
 };
 
 struct fragment_t {
+    replace_new_delete
     face_t                  *face;
-    std::vector<vertex_t>   vertices;
+    csg_vector(vertex_t)    vertices;
     volume_t                front_volume;
     volume_t                back_volume;
     brush_t                 *front_brush;
@@ -67,19 +86,21 @@ module_private:
     int                     relation; 
 };
 
-std::vector<triangle_t> triangulate(const fragment_t& fragment);
+csg_vector(triangle_t) triangulate(const fragment_t& fragment);
 
 struct face_t {
+    replace_new_delete
     const plane_t           *plane;
-    std::vector<vertex_t>   vertices;
-    std::vector<fragment_t> fragments;
+    csg_vector(vertex_t)    vertices;
+    csg_vector(fragment_t)  fragments;
 };
 
 struct brush_t {
-    void                        set_planes(const std::vector<plane_t>& planes);
-    const std::vector<plane_t>& get_planes() const;
+    replace_new_delete
+    void                        set_planes(const csg_vector(plane_t)& planes);
+    const csg_vector(plane_t)&  get_planes() const;
     void                        set_volume_operation(const volume_operation_t& volume_operation);
-    const std::vector<face_t>&  get_faces() const;
+    const csg_vector(face_t)&   get_faces() const;
     void                        set_time(int time);
     int                         get_time() const;
     int                         get_uid() const;
@@ -96,30 +117,31 @@ module_private:
     brush_t               *next;
     brush_t               *prev;
     world_t               *world;
-    std::vector<plane_t>  planes;
-    std::vector<brush_t*> intersecting_brushes;
+    csg_vector(plane_t)   planes;
+    csg_vector(brush_t*)  intersecting_brushes;
     volume_operation_t    volume_operation;
-    std::vector<face_t>   faces;
+    csg_vector(face_t)    faces;
     box_t                 box;
     int                   time;
     int                   uid;
 };
 
 struct world_t {
+    replace_new_delete
     world_t();
     ~world_t();
     brush_t                *first();
     brush_t                *next(brush_t *brush);
     void                   remove(brush_t *brush);
     brush_t                *add();
-    std::set<brush_t*>     rebuild();
+    csg_set(brush_t*)      rebuild();
     void                   set_void_volume(volume_t void_volume);
     volume_t               get_void_volume() const;
     // todo: accelerate queries with bvh
-    std::vector<brush_t*>  query_point(const glm::vec3& point);
-    std::vector<brush_t*>  query_box(const box_t& box);
-    std::vector<ray_hit_t> query_ray(const ray_t& ray);
-    std::vector<brush_t*>  query_frustum(const glm::mat4& view_projection);
+    csg_vector(brush_t*)   query_point(const glm::vec3& point);
+    csg_vector(brush_t*)   query_box(const box_t& box);
+    csg_vector(ray_hit_t)  query_ray(const ray_t& ray);
+    csg_vector(brush_t*)   query_frustum(const glm::mat4& view_projection);
     std::any               userdata;
 
 module_private:
@@ -129,8 +151,8 @@ module_private:
     world_t(world_t&& other) = delete;
     world_t& operator=(world_t&& other) = delete;
     brush_t            *sentinel;
-    std::set<brush_t*> need_face_and_box_rebuild;
-    std::set<brush_t*> need_fragment_rebuild;
+    csg_set(brush_t*)  need_face_and_box_rebuild;
+    csg_set(brush_t*)  need_fragment_rebuild;
     volume_t           void_volume;
     int                next_uid;
 };

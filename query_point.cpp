@@ -11,8 +11,8 @@ static bool box_contains_point(const box_t& box, const glm::vec3& point) {
     return box_intersects_box(box, box_t{point, point});
 }
 
-std::vector<brush_t*> world_t::query_point(const glm::vec3& point) {
-    std::vector<brush_t*> result;
+csg_vector(brush_t*) world_t::query_point(const glm::vec3& point) {
+    csg_vector(brush_t*) result;
     brush_t *b = first();
     while (b) {
         if (box_contains_point(b->box, point))

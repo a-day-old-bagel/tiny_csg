@@ -2,10 +2,10 @@
 
 namespace csg {
 
-std::vector<triangle_t> triangulate(const fragment_t& fragment) {
+csg_vector(triangle_t) triangulate(const fragment_t& fragment) {
     int vertex_count = fragment.vertices.size();
-    std::vector<int> indices;
-    std::vector<triangle_t> tris;
+    csg_vector(int) indices;
+    csg_vector(triangle_t) tris;
     indices.resize(vertex_count);
     for (int i=0; i<vertex_count; ++i)
         indices[i] = i;
@@ -35,14 +35,14 @@ volume_operation_t make_convert_operation(volume_t from, volume_t to) {
     };
 }
 
-void brush_t::set_planes(const std::vector<plane_t>& planes) {
+void brush_t::set_planes(const csg_vector(plane_t)& planes) {
     this->planes = planes;
     world->need_face_and_box_rebuild.insert(this);
     for (brush_t* intersecting: intersecting_brushes)
         world->need_fragment_rebuild.insert(intersecting);
 }
 
-const std::vector<plane_t>& brush_t::get_planes() const {
+const csg_vector(plane_t)& brush_t::get_planes() const {
     return planes;
 }
 
@@ -53,7 +53,7 @@ void brush_t::set_volume_operation(const volume_operation_t& volume_operation) {
         world->need_fragment_rebuild.insert(intersecting);
 }
 
-const std::vector<face_t>& brush_t::get_faces() const {
+const csg_vector(face_t)& brush_t::get_faces() const {
     return faces;
 }
 
