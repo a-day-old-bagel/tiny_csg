@@ -1,3 +1,5 @@
+#pragma once
+
 #include <new>
 #include <limits>
 
@@ -35,6 +37,12 @@ namespace CCSG {
     bool operator!=(const STL_Allocator <T>&, const STL_Allocator <U>&) { return false; }
 }
 
+#define CSG_CUSTOM_STL_ALLOCATOR(...) CCSG::STL_Allocator<__VA_ARGS__>
+
+#define csg_vector(T) std::vector<T, CSG_CUSTOM_STL_ALLOCATOR(T)>
+#define csg_set(T) std::set<T, std::less<T>, CSG_CUSTOM_STL_ALLOCATOR(T)>
+#define csg_map(K, T) std::map<K, T, std::less<K>, CSG_CUSTOM_STL_ALLOCATOR(std::pair<const K, T>)>
+
 #if defined(__clang__)
     #define CCSG_COMPILER_CLANG
 #elif defined(__GNUC__)
@@ -51,7 +59,7 @@ namespace CCSG {
     #error Undefined
 #endif
 
-#define replace_new_delete \
+#define csg_replace_new_delete \
     CCSG_INLINE void *operator new (size_t inCount) { return CCSG::Allocate(inCount); } \
     CCSG_INLINE void operator delete (void *inPointer) noexcept { CCSG::Free(inPointer); } \
     CCSG_INLINE void *operator new[] (size_t inCount) { return CCSG::Allocate(inCount); } \
@@ -65,4 +73,3 @@ namespace CCSG {
     CCSG_INLINE void operator delete[] (void *inPointer, std::align_val_t inAlignment) noexcept \
         { CCSG::AlignedFree(inPointer); }
 
-#define custom_stl_allocator(T) CCSG::STL_Allocator<T>

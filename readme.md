@@ -1,3 +1,11 @@
+### **FORK NOTES:**
+
+This fork adds zig bindings, and by extension, C bindings.
+
+Additionally, some minor macro magic was attempted to allow for custom allocators in the existing C++ code.
+
+The orginal contents of the project's readme appear below.
+
 # tiny_csg
 
 **tiny_csg** is a C++ library that generates meshes from brush-based level data and supports incremental updates (real-time CSG). It is intended to be used as a backend in 3d level editors and/or generators.

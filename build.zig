@@ -5,9 +5,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
 
     const options = .{
-        .use_custom_allocator = b.option(
+        .use_custom_alloc = b.option(
             bool,
-            "use_custom_allocator",
+            "use_custom_alloc",
             "Replace the new and delete operators for C++",
         ) orelse true,
     };
@@ -34,6 +34,7 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(ccsg);
 
+    if (options.use_custom_alloc) ccsg.defineCMacro("CSG_CUSTOM_ALLOCATOR_HEADER", "\"bindings/c/ccsg_memory.hpp\"");
     ccsg.addIncludePath(.{ .path = "./" });
     ccsg.addIncludePath(.{ .path = "3rdp/glm" });
     ccsg.linkLibC();
@@ -43,7 +44,6 @@ pub fn build(b: *std.Build) void {
     ccsg.addCSourceFiles(.{
         .files = &.{
             "bindings/c/ccsg.cpp",
-            "bindings/c/ccsg_memory.cpp",
             "csg.cpp",
             "query_box.cpp",
             "query_frustum.cpp",
@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) void {
             "-std=c++20",
             "-fno-access-control",
             "-fno-sanitize=undefined",
-            if (options.use_custom_allocator) "-DCCSG_USE_CUSTOM_ALLOCATOR" else "",
+            // if (options.use_custom_alloc) "-DCSG_CUSTOM_ALLOCATOR_HEADER" else "",
         },
     });
 

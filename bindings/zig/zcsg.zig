@@ -18,8 +18,8 @@ var mem_mutex: std.Thread.Mutex = .{};
 const mem_alignment = 16;
 
 pub fn init_allocator(allocator: std.mem.Allocator) !void {
-    std.debug.assert(options.use_custom_allocator);
-    if (!options.use_custom_allocator) return;
+    std.debug.assert(options.use_custom_alloc);
+    if (!options.use_custom_alloc) return;
 
     std.debug.assert(mem_allocator == null and mem_allocations == null);
 
@@ -31,8 +31,8 @@ pub fn init_allocator(allocator: std.mem.Allocator) !void {
 }
 
 pub fn deinit_allocator() void {
-    std.debug.assert(options.use_custom_allocator);
-    if (!options.use_custom_allocator) return;
+    std.debug.assert(options.use_custom_alloc);
+    if (!options.use_custom_alloc) return;
 
     mem_allocations.?.deinit();
     mem_allocations = null;

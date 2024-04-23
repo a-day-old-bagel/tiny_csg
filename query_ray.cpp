@@ -52,7 +52,7 @@ static bool ray_intersects_plane(const ray_t& ray,
 }
 
 static bool point_inside_convex_polygon(const glm::vec3& point,
-                                        const csg_vector(vertex_t)& vertices)
+                                        const vector_t<vertex_t>& vertices)
 {
     int n = vertices.size();
     if (n < 3) 
@@ -79,10 +79,10 @@ static bool point_inside_convex_polygon(const glm::vec3& point,
     return true;
 }
 
-csg_vector(ray_hit_t) world_t::query_ray(const ray_t& ray) {
+vector_t<ray_hit_t> world_t::query_ray(const ray_t& ray) {
     glm::vec3 one_over_ray_direction = 1.0f / ray.direction;
 
-    csg_vector(ray_hit_t) result;
+    vector_t<ray_hit_t> result;
     brush_t *b = first();
     while (b) {
         if (ray_intersects_box(ray, b->box, one_over_ray_direction)) {
