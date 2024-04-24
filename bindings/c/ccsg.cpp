@@ -37,22 +37,27 @@ CCSG_RegisterCustomAllocator(CCSG_AllocateFunction in_alloc,
 // Safety Checks
 //--------------------------------------------------------------------------------------------------
 #define SIZE_ASSERT(C_TYPE, CPP_TYPE) static_assert(sizeof(C_TYPE) == sizeof(CPP_TYPE));
-#define LAYOUT_ASSERTS(C_TYPE, CPP_TYPE, MEMBER) \
+#define LAYOUT_ASSERTS(C_TYPE, CPP_TYPE, C_MEMBER, CPP_MEMBER) \
     static_assert(sizeof(C_TYPE) == sizeof(CPP_TYPE)); \
-    static_assert(offsetof(C_TYPE, MEMBER) == offsetof(CPP_TYPE, MEMBER));
+    static_assert(offsetof(C_TYPE, C_MEMBER) == offsetof(CPP_TYPE, CPP_MEMBER));
 
 static_assert(sizeof(glm::vec3) == 3 * sizeof(float));
 static_assert(sizeof(glm::mat4) == 16 * sizeof(float));
+static_assert(sizeof(csg::vector_t<csg::brush_t*>) == 3 * sizeof(const void*));
 
 SIZE_ASSERT(CCSG_Vec3, glm::vec3)
 SIZE_ASSERT(CCSG_Mat4, glm::mat4)
+SIZE_ASSERT(const void*[3], csg::vector_t<csg::plane_t>)
 
-LAYOUT_ASSERTS(CCSG_Plane, csg::plane_t, offset)
-LAYOUT_ASSERTS(CCSG_Ray, csg::ray_t, direction)
-LAYOUT_ASSERTS(CCSG_RayHit, csg::ray_hit_t, position)
-LAYOUT_ASSERTS(CCSG_Box, csg::box_t, max)
-LAYOUT_ASSERTS(CCSG_Vertex, csg::vertex_t, position)
-LAYOUT_ASSERTS(CCSG_Triangle, csg::triangle_t, k)
+LAYOUT_ASSERTS(CCSG_Plane, csg::plane_t, offset, offset)
+LAYOUT_ASSERTS(CCSG_Ray, csg::ray_t, direction, direction)
+LAYOUT_ASSERTS(CCSG_RayHit, csg::ray_hit_t, position, position)
+LAYOUT_ASSERTS(CCSG_Box, csg::box_t, max, max)
+LAYOUT_ASSERTS(CCSG_Vertex, csg::vertex_t, position, position)
+LAYOUT_ASSERTS(CCSG_Triangle, csg::triangle_t, k, k)
+
+LAYOUT_ASSERTS(CCSG_Fragment, csg::fragment_t, back_brush, back_brush)
+LAYOUT_ASSERTS(CCSG_Face, csg::face_t, __private_1, fragments)
 #undef LAYOUT_ASSERTS
 #undef SIZE_ASSERT
 
@@ -60,10 +65,13 @@ LAYOUT_ASSERTS(CCSG_Triangle, csg::triangle_t, k)
 // STL Container Aliases
 //--------------------------------------------------------------------------------------------------
 using BrushSet = csg::set_t<csg::brush_t*>;
+using BrushSet_Iterator = BrushSet::iterator;
+
 using BrushVec = csg::vector_t<csg::brush_t*>;
 using RayHitVec = csg::vector_t<csg::ray_hit_t>;
 using FaceVec = csg::vector_t<csg::face_t>;
 using PlaneVec = csg::vector_t<csg::plane_t>;
+using TriangleVec = csg::vector_t<csg::triangle_t>;
 
 //--------------------------------------------------------------------------------------------------
 // C <---> C++ Pointer Cast Helpers
@@ -77,6 +85,7 @@ using PlaneVec = csg::vector_t<csg::plane_t>;
 C_CPP_PTR_CONVERT(CCSG_World, csg::world_t)
 C_CPP_PTR_CONVERT(CCSG_Face, csg::face_t)
 C_CPP_PTR_CONVERT(CCSG_Brush, csg::brush_t)
+C_CPP_PTR_CONVERT(CCSG_Brush*, csg::brush_t*)
 C_CPP_PTR_CONVERT(CCSG_Fragment, csg::fragment_t)
 
 C_CPP_PTR_CONVERT(CCSG_Plane, csg::plane_t)
@@ -87,10 +96,13 @@ C_CPP_PTR_CONVERT(CCSG_Vertex, csg::vertex_t)
 C_CPP_PTR_CONVERT(CCSG_Triangle, csg::triangle_t)
 
 C_CPP_PTR_CONVERT(CCSG_BrushSet, BrushSet)
+C_CPP_PTR_CONVERT(CCSG_BrushSet_Iterator, BrushSet_Iterator)
+
 C_CPP_PTR_CONVERT(CCSG_BrushVec, BrushVec)
 C_CPP_PTR_CONVERT(CCSG_RayHitVec, RayHitVec)
 C_CPP_PTR_CONVERT(CCSG_FaceVec, FaceVec)
 C_CPP_PTR_CONVERT(CCSG_PlaneVec, PlaneVec)
+C_CPP_PTR_CONVERT(CCSG_TriangleVec, TriangleVec)
 
 C_CPP_PTR_CONVERT(CCSG_Vec3, glm::vec3)
 C_CPP_PTR_CONVERT(CCSG_Mat4, glm::mat4)
@@ -101,19 +113,89 @@ C_CPP_PTR_CONVERT(CCSG_Mat4, glm::mat4)
 // STL Container Methods
 //--------------------------------------------------------------------------------------------------
 void
-CCSG_BrushSet_Destroy(CCSG_BrushSet *set) { delete toCpp(set); }
+CCSG_BrushSet_Destroy(CCSG_BrushSet *set) {
+#   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
+        CCSG::Free(toCpp(set));
+#   else
+        delete toCpp(set);
+#   endif
+}
+
+CCSG_BrushSet_Iterator*
+CCSG_BrushSet_Iterator_Begin(CCSG_BrushSet *set) {
+#   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
+        auto iterator = static_cast<BrushSet_Iterator*>(CCSG::Allocate(sizeof(BrushSet_Iterator)));
+            ::new (iterator) BrushSet_Iterator(toCpp(set)->begin());
+#   else
+        auto iterator = new BrushSet_Iterator(toCpp(set)->begin());
+#   endif
+    return toC(iterator);
+}
+
+int // returns 0 if iterator has reached the end of the set
+CCSG_BrushSet_Iterator_Next(CCSG_BrushSet *set, CCSG_BrushSet_Iterator *last) {
+    auto iterator = *(toCpp(last));
+    iterator++;
+    if (iterator == toCpp(set)->end()) return 0;
+    return 1;
+}
+
+const CCSG_Brush*
+CCSG_BrushSet_Iterator_Read(const CCSG_BrushSet_Iterator *iterator) { return toC(**(toCpp(iterator))); }
 
 void
-CCSG_BrushVec_Destroy(CCSG_BrushVec *vec) { delete toCpp(vec); }
+CCSG_BrushSet_Iterator_Destroy(CCSG_BrushSet_Iterator *iterator) {
+#   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
+        CCSG::Free(toCpp(iterator));
+#   else
+        delete toCpp(iterator);
+#   endif
+}
 
 void
-CCSG_RayHitVec_Destroy(CCSG_RayHitVec *vec) { delete toCpp(vec); }
+CCSG_BrushVec_Destroy(CCSG_BrushVec *vec) {
+#   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
+        CCSG::Free(toCpp(vec));
+#   else
+        delete toCpp(vec);
+#   endif
+}
+
+size_t // Return value is length of array
+CCSG_BrushVec_GetPtr(CCSG_BrushVec *vec, const CCSG_Brush *const **out_array) {
+    (*out_array) = toC(toCpp(vec)->data());
+    return toCpp(vec)->size();
+}
 
 void
-CCSG_FaceVec_Destroy(CCSG_FaceVec *vec) { delete toCpp(vec); }
+CCSG_RayHitVec_Destroy(CCSG_RayHitVec *vec) {
+#   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
+        CCSG::Free(toCpp(vec));
+#   else
+        delete toCpp(vec);
+#   endif
+}
+
+size_t // Return value is length of array
+CCSG_RayHitVec_GetPtr(CCSG_RayHitVec *vec, const CCSG_RayHit **out_array) {
+    (*out_array) = toC(toCpp(vec)->data());
+    return toCpp(vec)->size();
+}
 
 void
-CCSG_PlaneVec_Destroy(CCSG_PlaneVec *vec) { delete toCpp(vec); }
+CCSG_TriangleVec_Destroy(CCSG_TriangleVec *vec) {
+#   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
+        CCSG::Free(toCpp(vec));
+#   else
+        delete toCpp(vec);
+#   endif
+}
+
+size_t // Return value is length of array
+CCSG_TriangleVec_GetPtr(CCSG_TriangleVec *vec, const CCSG_Triangle **out_array) {
+    (*out_array) = toC(toCpp(vec)->data());
+    return toCpp(vec)->size();
+}
 
 //--------------------------------------------------------------------------------------------------
 // CCSG_World
@@ -141,7 +223,7 @@ CCSG_World_Remove(CCSG_World *world, CCSG_Brush *brush) { toCpp(world)->remove(t
 CCSG_Brush*
 CCSG_World_Add(CCSG_World *world) { return toC(toCpp(world)->add()); }
 
-CCSG_BrushSet*
+CCSG_BrushSet* // Returns a pointer to copied memory that will be owned and freed by the caller.
 CCSG_World_Rebuild(CCSG_World *world) {
 #   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
         auto brush_set = static_cast<BrushSet*>(CCSG::Allocate(sizeof(BrushSet)));
@@ -158,7 +240,7 @@ CCSG_World_SetVoidVolume(CCSG_World *world, CCSG_Volume void_volume) { toCpp(wor
 CCSG_Volume
 CCSG_World_GetVoidVolume(const CCSG_World *world) { return toCpp(world)->get_void_volume(); }
 
-CCSG_BrushVec*
+CCSG_BrushVec* // Returns a pointer to copied memory that will be owned and freed by the caller.
 CCSG_World_QueryPoint(CCSG_World *world, const CCSG_Vec3 *point) {
 #   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
         auto brush_vec = static_cast<BrushVec*>(CCSG::Allocate(sizeof(BrushVec)));
@@ -169,7 +251,7 @@ CCSG_World_QueryPoint(CCSG_World *world, const CCSG_Vec3 *point) {
     return toC(brush_vec);
 }
 
-CCSG_BrushVec*
+CCSG_BrushVec* // Returns a pointer to copied memory that will be owned and freed by the caller.
 CCSG_World_QueryBox(CCSG_World *world, const CCSG_Box *box) {
 #   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
         auto brush_vec = static_cast<BrushVec*>(CCSG::Allocate(sizeof(BrushVec)));
@@ -180,7 +262,7 @@ CCSG_World_QueryBox(CCSG_World *world, const CCSG_Box *box) {
     return toC(brush_vec);
 }
 
-CCSG_RayHitVec*
+CCSG_RayHitVec* // Returns a pointer to copied memory that will be owned and freed by the caller.
 CCSG_World_QueryRay(CCSG_World *world, const CCSG_Ray *ray) {
 #   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
         auto ray_hit_vec = static_cast<RayHitVec*>(CCSG::Allocate(sizeof(RayHitVec)));
@@ -191,7 +273,7 @@ CCSG_World_QueryRay(CCSG_World *world, const CCSG_Ray *ray) {
     return toC(ray_hit_vec);
 }
 
-CCSG_BrushVec*
+CCSG_BrushVec* // Returns a pointer to copied memory that will be owned and freed by the caller.
 CCSG_World_QueryFrustum(CCSG_World *world, const CCSG_Mat4 *view_projection) {
 #   ifdef CSG_CUSTOM_ALLOCATOR_HEADER
         auto brush_vec = static_cast<BrushVec*>(CCSG::Allocate(sizeof(BrushVec)));
@@ -203,7 +285,7 @@ CCSG_World_QueryFrustum(CCSG_World *world, const CCSG_Mat4 *view_projection) {
 }
 
 void*
-CCSG_WorldGetUserData(const CCSG_World *world) { return std::any_cast<void*>(toCpp(world)->userdata); }
+CCSG_World_GetUserData(const CCSG_World *world) { return std::any_cast<void*>(toCpp(world)->userdata); }
 
 void
 CCSG_World_SetUserData(CCSG_World *world, void *user_data) { toCpp(world)->userdata = std::make_any<void*>(user_data); }
@@ -211,13 +293,61 @@ CCSG_World_SetUserData(CCSG_World *world, void *user_data) { toCpp(world)->userd
 //--------------------------------------------------------------------------------------------------
 // CCSG_Brush
 //--------------------------------------------------------------------------------------------------
-const CCSG_PlaneVec*
+void // Makes a copy of the caller's owned memory. The caller's array can be freed afterward.
+CCSG_Brush_SetPlanes(CCSG_Brush *brush, const CCSG_Plane *plane_array, size_t array_length) {
+    PlaneVec copied_vec(toCpp(plane_array), toCpp(plane_array + array_length));
+    toCpp(brush)->set_planes(copied_vec);
+}
+
+const CCSG_PlaneVec* // Returns pointer to library-owned memory. The caller may not manipulate nor free it.
 CCSG_Brush_GetPlanes(const CCSG_Brush *brush) { return toC(&toCpp(brush)->get_planes()); }
+
+void
+CCSG_Brush_SetVolumeOperation(CCSG_Brush *brush, const CCSG_VolumeOperation operation) {
+    toCpp(brush)->set_volume_operation(operation);
+}
+
+const CCSG_FaceVec* // Returns pointer to library-owned memory. The caller may not manipulate nor free it.
+CCSG_Brush_GetFaces(const CCSG_Brush *brush) { return toC(&toCpp(brush)->get_faces()); }
+
+void
+CCSG_Brush_SetTime(CCSG_Brush *brush, int time) { toCpp(brush)->set_time(time); }
+
+int
+CCSG_Brush_GetTime(const CCSG_Brush *brush) { return toCpp(brush)->get_time(); }
+
+int
+CCSG_Brush_GetUid(const CCSG_Brush *brush) { return toCpp(brush)->get_uid(); }
+
+CCSG_Box*
+CCSG_Brush_GetBox(const CCSG_Brush *brush) { return toC(new csg::box_t(toCpp(brush)->get_box())); }
+
+void*
+CCSG_Brush_GetUserData(const CCSG_Brush *brush) { return std::any_cast<void*>(toCpp(brush)->userdata); }
+
+void
+CCSG_Brush_SetUserData(CCSG_Brush *brush, void *user_data) { toCpp(brush)->userdata = std::make_any<void*>(user_data); }
 
 //--------------------------------------------------------------------------------------------------
 // CCSG_Fragment
 //--------------------------------------------------------------------------------------------------
+size_t // Return value is length of array
+CCSG_Fragment_GetVerticesPtr(CCSG_Fragment *fragment, const CCSG_Vertex **out_array) {
+    (*out_array) = toC(toCpp(fragment)->vertices.data());
+    return toCpp(fragment)->vertices.size();
+}
 
 //--------------------------------------------------------------------------------------------------
 // CCSG_Face
 //--------------------------------------------------------------------------------------------------
+size_t // Return value is length of array
+CCSG_Face_GetVerticesPtr(CCSG_Face *face, const CCSG_Vertex **out_array) {
+    (*out_array) = toC(toCpp(face)->vertices.data());
+    return toCpp(face)->vertices.size();
+}
+
+size_t // Return value is length of array
+CCSG_Face_GetFragmentsPtr(CCSG_Face *face, const CCSG_Fragment **out_array) {
+    (*out_array) = toC(toCpp(face)->fragments.data());
+    return toCpp(face)->fragments.size();
+}

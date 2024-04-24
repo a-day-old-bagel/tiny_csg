@@ -107,6 +107,28 @@ pub const World = opaque {
     pub fn destroy(world: *World) void {
         c.CCSG_World_Destroy(@as(*c.CCSG_World, @ptrCast(world)));
     }
+
+    pub fn first(world: *World) ?*Brush {
+        return @as(*Brush, @ptrCast(c.CCSG_World_First(@as(*c.CCSG_World, @ptrCast(world)))));
+    }
+    pub fn next(world: *World, brush: *Brush) ?*Brush {
+        return @as(*Brush, @ptrCast(
+            c.CCSG_World_Next(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)))
+        ));
+    }
+    pub fn remove(world: *World, brush: *Brush) void {
+        c.CCSG_World_Remove(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)));
+    }
+    pub fn add(world: *World) *Brush {
+        return @as(*Brush, @ptrCast(c.CCSG_World_Add(@as(*c.CCSG_World, @ptrCast(world)))));
+    }
+};
+
+//--------------------------------------------------------------------------------------------------
+// Brush
+//--------------------------------------------------------------------------------------------------
+pub const Brush = opaque {
+
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -114,8 +136,16 @@ pub const World = opaque {
 //--------------------------------------------------------------------------------------------------
 const expect = std.testing.expect;
 
-extern fn JoltCTest_HelloWorld() u32;
-test "jolt_c.helloworld" {
-    const ret = JoltCTest_HelloWorld();
+test "decls" {
+    std.testing.refAllDeclsRecursive(@This());
+}
+
+extern fn CCSG_Test_HelloWorld() u32;
+test "ccsg.helloworld" {
+    const ret = CCSG_Test_HelloWorld();
     try expect(ret == 0);
+}
+
+test "helloworld.defaultalloc" {
+
 }

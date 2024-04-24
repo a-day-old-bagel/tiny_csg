@@ -21,6 +21,8 @@ pub fn build(b: *std.Build) void {
 
     const zcsg = b.addModule("root", .{
         .root_source_file = .{ .path = "bindings/zig/zcsg.zig" },
+        .target = target,
+        .optimize = optimize,
         .imports = &.{
             .{ .name = "zcsg_options", .module = options_module },
         },
@@ -73,14 +75,14 @@ pub fn build(b: *std.Build) void {
     }
 
     tests.addCSourceFile(.{
-        .file = .{ .path = "zig/ccsg_tests.c" },
+        .file = .{ .path = "bindings/c/ccsg_tests.c" },
         .flags = &.{
             "-fno-sanitize=undefined",
         },
     });
 
     tests.root_module.addImport("zcsg_options", options_module);
-    tests.addIncludePath(.{ .path = "zig" });
+    tests.addIncludePath(.{ .path = "bindings/c" });
     tests.linkLibrary(ccsg);
 
     test_step.dependOn(&b.addRunArtifact(tests).step);

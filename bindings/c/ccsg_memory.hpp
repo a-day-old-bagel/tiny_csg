@@ -1,6 +1,7 @@
 #pragma once
 
 #include <new>
+#include <cstdio>
 
 namespace CCSG {
 
@@ -25,8 +26,12 @@ namespace CCSG {
         template<class U>
         constexpr STL_Allocator(const STL_Allocator <U>&) noexcept {}
 
-        [[nodiscard]] T* allocate(std::size_t n) noexcept { return static_cast<T*>(CCSG::Allocate(n * sizeof(T))); }
-        void deallocate(T* p, std::size_t n) noexcept { CCSG::Free(p); }
+        [[nodiscard]] T* allocate(std::size_t n) noexcept {
+            return static_cast<T*>(CCSG::Allocate(n * sizeof(T)));
+        }
+        void deallocate(T* p, std::size_t n) noexcept {
+            CCSG::Free(p);
+        }
     };
 
     template<class T, class U>
