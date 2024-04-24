@@ -55,7 +55,6 @@ pub fn build(b: *std.Build) void {
             "-std=c++20",
             "-fno-access-control",
             "-fno-sanitize=undefined",
-            // if (options.use_custom_alloc) "-DCSG_CUSTOM_ALLOCATOR_HEADER" else "",
         },
     });
 

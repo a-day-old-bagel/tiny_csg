@@ -1,7 +1,6 @@
 #pragma once
 
 #include <new>
-#include <limits>
 
 namespace CCSG {
 
