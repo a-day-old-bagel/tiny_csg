@@ -135,8 +135,8 @@ CCSG_BrushSet_Iterator_Begin(CCSG_BrushSet *set) {
 int // returns 0 if iterator has reached the end of the set
 CCSG_BrushSet_Iterator_Next(CCSG_BrushSet *set, CCSG_BrushSet_Iterator *last) {
     auto iterator = *(toCpp(last));
-    iterator++;
     if (iterator == toCpp(set)->end()) return 0;
+    iterator++;
     return 1;
 }
 

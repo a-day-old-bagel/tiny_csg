@@ -122,6 +122,10 @@ pub const World = opaque {
     pub fn add(world: *World) *Brush {
         return @as(*Brush, @ptrCast(c.CCSG_World_Add(@as(*c.CCSG_World, @ptrCast(world)))));
     }
+
+    pub fn rebuild(world: *World) *BrushSet {
+        return @as(*BrushSet, @ptrCast(c.CCSG_World_Rebuild(@as(*c.CCSG_World, @ptrCast(world)))));
+    }
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -129,6 +133,33 @@ pub const World = opaque {
 //--------------------------------------------------------------------------------------------------
 pub const Brush = opaque {
 
+};
+
+//--------------------------------------------------------------------------------------------------
+// BrushSet
+//--------------------------------------------------------------------------------------------------
+pub const BrushSet = opaque {
+    pub fn destroy(set: *BrushSet) void {
+        c.CCSG_BrushSet_Destroy(@as(*c.CCSG_BrushSet, @ptrCast(set)));
+    }
+    pub fn iterator(set: *BrushSet) *Iterator {
+        return @as(*Iterator, @ptrCast(c.CCSG_BrushSet_Iterator_Begin(@as(*c.CCSG_BrushSet, @ptrCast(set)))));
+    }
+
+    pub const Iterator = opaque {
+        pub fn destroy(self: *Iterator) void {
+            c.CCSG_BrushSet_Iterator_Destroy(@as(*c.CCSG_BrushSet_Iterator, @ptrCast(self)));
+        }
+        pub fn next(self: *Iterator, set: *BrushSet) ?*const Brush {
+            const current = c.CCSG_BrushSet_Iterator_Read(@as(*const c.CCSG_BrushSet_Iterator, @ptrCast(self)));
+            const exists = c.CCSG_BrushSet_Iterator_Next(
+                @as(*c.CCSG_BrushSet, @ptrCast(set)),
+                @as(*c.CCSG_BrushSet_Iterator, @ptrCast(self)),
+            );
+            if (exists == 0) return null;
+            return @as(*const Brush, @ptrCast(current));
+        }
+    };
 };
 
 //--------------------------------------------------------------------------------------------------
