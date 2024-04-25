@@ -74,6 +74,7 @@ pub fn build(b: *std.Build) void {
         tests.want_lto = false;
     }
 
+    if (options.use_custom_alloc) tests.defineCMacro("CSG_CUSTOM_ALLOCATOR_HEADER", "\"bindings/c/ccsg_memory.hpp\"");
     tests.addCSourceFile(.{
         .file = .{ .path = "bindings/c/ccsg_tests.c" },
         .flags = &.{

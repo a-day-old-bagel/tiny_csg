@@ -173,10 +173,15 @@ test "decls" {
 
 extern fn CCSG_Test_HelloWorld() u32;
 test "ccsg.helloworld" {
+    if (options.use_custom_alloc) try init_allocator(std.testing.allocator);
     const ret = CCSG_Test_HelloWorld();
     try expect(ret == 0);
+    if (options.use_custom_alloc) deinit_allocator();
 }
 
-test "helloworld.defaultalloc" {
-
+test "helloworld" {
+    if (options.use_custom_alloc) try init_allocator(std.testing.allocator);
+    const world = World.create();
+    world.destroy();
+    if (options.use_custom_alloc) deinit_allocator();
 }
