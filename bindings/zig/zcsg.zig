@@ -262,9 +262,6 @@ pub const Brush = opaque {
             planes.len,
         );
     }
-    pub fn getPlanes(brush: *const Brush) *BrushList {
-        _ = brush;
-    }
 
     pub fn setVolumeOperation(brush: *Brush, op: *const VolumeOperation) void {
         c.CCSG_Brush_SetVolumeOperation(
@@ -313,19 +310,35 @@ pub const BrushSet = opaque {
 
 pub const BrushList = opaque {
     pub fn deinit(list: *BrushList) void {
-        _ = list;
+        c.CCSG_BrushVec_Destroy(@as(*c.CCSG_BrushVec, @ptrCast(list)));
     }
-    pub fn getSlice(list: *BrushList) []*const Brush {
-        _ = list;
+    pub fn getSlice(list: *BrushList) ?[]const *Brush {
+        var ptr: [*c]*Brush = null;
+        const len = c.CCSG_BrushVec_GetPtr(
+            @as(*const c.CCSG_BrushVec, @ptrCast(list)),
+            @as([*c][*c] *c.CCSG_Brush, @ptrCast(&ptr)),
+        );
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
     }
 };
 
 pub const RayHitList = opaque {
     pub fn deinit(list: *RayHitList) void {
-        _ = list;
+        c.CCSG_RayHitVec_Destroy(@as(*c.CCSG_RayHitVec, @ptrCast(list)));
     }
-    pub fn getSlice(list: *RayHitList) []*const RayHit {
-        _ = list;
+    pub fn getSlice(list: *RayHitList) ?[]const RayHit {
+        var ptr: [*c]RayHit = null;
+        const len = c.CCSG_RayHitVec_GetPtr(
+            @as(*const c.CCSG_RayHitVec, @ptrCast(list)),
+            @as([*c][*c] c.CCSG_RayHit, @ptrCast(&ptr)),
+        );
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
     }
 };
 
@@ -375,4 +388,93 @@ test "helloworld" {
     const world = World.init();
     world.deinit();
     if (options.use_custom_alloc) deinit_allocator();
+}
+
+test "square_torus" {
+    if (options.use_custom_alloc) try init_allocator(std.testing.allocator);
+    defer { if (options.use_custom_alloc) deinit_allocator(); }
+
+    const space_brush_op: Volume = 0;
+    const solid_brush_op: Volume = 1;
+
+    const space_volume_op = VolumeOperation.initFill(space_brush_op);
+    defer space_volume_op.deinit();
+
+    const solid_volume_op = VolumeOperation.initFill(solid_brush_op);
+    defer solid_volume_op.deinit();
+
+    const csg_world = World.init();
+    defer csg_world.deinit();
+
+    const brush_0 = csg_world.add();
+    defer csg_world.remove(brush_0);
+    brush_0.setVolumeOperation(solid_volume_op);
+
+    const planes_0: [6]Plane = .{
+        .{ .normal = .{ 0, 0, 1 }, .offset = -30 },
+        .{ .normal = .{ 0, 0, -1 }, .offset = 20 },
+        .{ .normal = .{ 1, 0, 0 }, .offset = -10 },
+        .{ .normal = .{ -1, 0, 0 }, .offset = -10 },
+        .{ .normal = .{ 0, 1, 0 }, .offset = -10 },
+        .{ .normal = .{ 0, -1, 0 }, .offset = -10 },
+    };
+    brush_0.setPlanes(&planes_0);
+
+    const brush_1 = csg_world.add();
+    defer csg_world.remove(brush_1);
+    brush_1.setVolumeOperation(space_volume_op);
+
+    const planes_1: [6]Plane = .{
+        .{ .normal = .{ 0, 0, 1 }, .offset = -30 },
+        .{ .normal = .{ 0, 0, -1 }, .offset = 20 },
+        .{ .normal = .{ 1, 0, 0 }, .offset = -5 },
+        .{ .normal = .{ -1, 0, 0 }, .offset = -5 },
+        .{ .normal = .{ 0, 1, 0 }, .offset = -5 },
+        .{ .normal = .{ 0, -1, 0 }, .offset = -5 },
+    };
+    brush_1.setPlanes(&planes_1);
+
+    const changed_brushes = csg_world.rebuild();
+    defer changed_brushes.deinit();
+
+    var points = std.ArrayList([3]f32).init(std.testing.allocator);
+    defer points.deinit();
+
+    var indices = std.ArrayList(u32).init(std.testing.allocator);
+    defer indices.deinit();
+
+    const brush_iterator = changed_brushes.iterator();
+    defer brush_iterator.deinit();
+    while (brush_iterator.next(changed_brushes)) |brush| {
+        const faces = brush.getFaces() orelse continue;
+        for (faces) |face| {
+            const fragments = face.getFragments() orelse continue;
+            for (fragments) |fragment| {
+                if (fragment.back_volume == fragment.front_volume) continue;
+                const vertices = fragment.getVertices() orelse continue;
+
+                const index_head = @as(u32, @intCast(points.items.len));
+                for (vertices) |vertex| { try points.append(vertex.position); }
+
+                const triangle_list = triangulate(&fragment);
+                defer triangle_list.deinit();
+
+                const triangles = triangle_list.getSlice() orelse continue;
+                for (triangles) |triangle| {
+                    if (fragment.back_volume == space_brush_op) {
+                        try indices.append(@as(u32, @intCast(triangle.i)) + index_head);
+                        try indices.append(@as(u32, @intCast(triangle.k)) + index_head);
+                        try indices.append(@as(u32, @intCast(triangle.j)) + index_head);
+                    } else {
+                        try indices.append(@as(u32, @intCast(triangle.i)) + index_head);
+                        try indices.append(@as(u32, @intCast(triangle.j)) + index_head);
+                        try indices.append(@as(u32, @intCast(triangle.k)) + index_head);
+                    }
+                }
+            }
+        }
+    }
+
+    try expect(points.items.len == 64);
+    try expect(indices.items.len == 96);
 }
