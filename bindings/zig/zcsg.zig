@@ -98,13 +98,136 @@ fn zcsgFree(maybe_ptr: ?*anyopaque) callconv(.C) void {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Reinterpreted Types - Must maintain these in sync with csg types
+//--------------------------------------------------------------------------------------------------
+pub const Volume = i32;
+pub const Vec3 = [3]f32;
+pub const Mat4 = [16]f32;
+
+pub const Plane = extern struct {
+    normal: Vec3,
+    offset: f32,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Plane)); }
+};
+
+pub const Face = extern struct {
+    plane: *const Plane,
+    _pad0: [3]*const anyopaque,
+    _pad1: [3]*const anyopaque,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Face)); }
+
+    pub fn getVertices(face: *const Face) ?[]const Vertex {
+        var ptr: [*c]Vertex = null;
+        const len = c.CCSG_Face_GetVerticesPtr(
+            @as(*const c.CCSG_Face, @ptrCast(face)),
+            @as([*c][*c] c.CCSG_Vertex, @ptrCast(&ptr)),
+        );
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
+    }
+    pub fn getFragments(face: *const Face) ?[]const Fragment {
+        var ptr: [*c]Fragment = null;
+        const len = c.CCSG_Face_GetFragmentsPtr(
+            @as(*const c.CCSG_Face, @ptrCast(face)),
+            @as([*c][*c] c.CCSG_Fragment, @ptrCast(&ptr)),
+        );
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
+    }
+};
+
+pub const Fragment = extern struct {
+    face: *Face,
+    _pad0: [3]*const anyopaque,
+    front_volume: Volume,
+    back_volume: Volume,
+    front_brush: *Brush,
+    back_brush: *Brush,
+    _pad1: i32,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Fragment)); }
+
+    pub fn getVertices(fragment: *const Fragment) ?[]const Vertex {
+        var ptr: [*c]Vertex = null;
+        const len = c.CCSG_Fragment_GetVerticesPtr(
+            @as(*const c.CCSG_Fragment, @ptrCast(fragment)),
+            @as([*c][*c] c.CCSG_Vertex, @ptrCast(&ptr)),
+        );
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
+    }
+};
+
+pub const Ray = extern struct {
+    origin: Vec3,
+    direction: Vec3,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Ray)); }
+};
+
+pub const RayHit = extern struct {
+    brush: *Brush,
+    face: *Face,
+    fragment: *Fragment,
+    parameter: f32,
+    position: Vec3,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_RayHit)); }
+};
+
+pub const Box = extern struct {
+    min: Vec3,
+    max: Vec3,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Box)); }
+};
+
+pub const Vertex = extern struct {
+    faces: [3]*const Face,
+    position: Vec3,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Vertex)); }
+};
+
+pub const Triangle = extern struct {
+    i: i32,
+    j: i32,
+    k: i32,
+
+    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Triangle)); }
+};
+
+//--------------------------------------------------------------------------------------------------
+// VolumeOperation
+//--------------------------------------------------------------------------------------------------
+pub const VolumeOperation = opaque {
+    pub fn initFill(volume: Volume) *VolumeOperation {
+        return @as(*VolumeOperation, @ptrCast(c.CCSG_MakeFillOperation(volume)));
+    }
+    pub fn initConvert(from: Volume, to: Volume) *VolumeOperation {
+        return @as(*VolumeOperation, @ptrCast(c.CCSG_MakeConvertOperation(from, to)));
+    }
+    pub fn deinit(operation: *VolumeOperation) void {
+        c.CCSG_VolumeOperation_Destroy(@as(*c.CCSG_VolumeOperation, @ptrCast(operation)));
+    }
+};
+
+//--------------------------------------------------------------------------------------------------
 // World
 //--------------------------------------------------------------------------------------------------
 pub const World = opaque {
-    pub fn create() *World {
+    pub fn init() *World {
         return @as(*World, @ptrCast(c.CCSG_World_Create()));
     }
-    pub fn destroy(world: *World) void {
+    pub fn deinit(world: *World) void {
         c.CCSG_World_Destroy(@as(*c.CCSG_World, @ptrCast(world)));
     }
 
@@ -132,14 +255,40 @@ pub const World = opaque {
 // Brush
 //--------------------------------------------------------------------------------------------------
 pub const Brush = opaque {
+    pub fn setPlanes(brush: *Brush, planes: []const Plane) void {
+        c.CCSG_Brush_SetPlanes(
+            @as(*c.CCSG_Brush, @ptrCast(brush)),
+            @as(*const c.CCSG_Plane, @ptrCast(planes.ptr)),
+            planes.len,
+        );
+    }
+    pub fn getPlanes(brush: *const Brush) *BrushList {
+        _ = brush;
+    }
 
+    pub fn setVolumeOperation(brush: *Brush, op: *const VolumeOperation) void {
+        c.CCSG_Brush_SetVolumeOperation(
+            @as(*c.CCSG_Brush, @ptrCast(brush)),
+            @as(*const c.CCSG_VolumeOperation, @ptrCast(op)),
+        );
+    }
+
+    pub fn getFaces(brush: *const Brush) ?[]const Face {
+        const vec = c.CCSG_Brush_GetFaces(@as(*const c.CCSG_Brush, @ptrCast(brush))) orelse return null;
+        var ptr: [*c]Face = null;
+        const len = c.CCSG_FaceVec_GetPtr(vec, @as([*c][*c] c.CCSG_Face, @ptrCast(&ptr)));
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
+    }
 };
 
 //--------------------------------------------------------------------------------------------------
-// BrushSet
+// STL Container Wrappers
 //--------------------------------------------------------------------------------------------------
 pub const BrushSet = opaque {
-    pub fn destroy(set: *BrushSet) void {
+    pub fn deinit(set: *BrushSet) void {
         c.CCSG_BrushSet_Destroy(@as(*c.CCSG_BrushSet, @ptrCast(set)));
     }
     pub fn iterator(set: *BrushSet) *Iterator {
@@ -147,7 +296,7 @@ pub const BrushSet = opaque {
     }
 
     pub const Iterator = opaque {
-        pub fn destroy(self: *Iterator) void {
+        pub fn deinit(self: *Iterator) void {
             c.CCSG_BrushSet_Iterator_Destroy(@as(*c.CCSG_BrushSet_Iterator, @ptrCast(self)));
         }
         pub fn next(self: *Iterator, set: *BrushSet) ?*const Brush {
@@ -161,6 +310,48 @@ pub const BrushSet = opaque {
         }
     };
 };
+
+pub const BrushList = opaque {
+    pub fn deinit(list: *BrushList) void {
+        _ = list;
+    }
+    pub fn getSlice(list: *BrushList) []*const Brush {
+        _ = list;
+    }
+};
+
+pub const RayHitList = opaque {
+    pub fn deinit(list: *RayHitList) void {
+        _ = list;
+    }
+    pub fn getSlice(list: *RayHitList) []*const RayHit {
+        _ = list;
+    }
+};
+
+pub const TriangleList = opaque {
+    pub fn deinit(list: *TriangleList) void {
+        c.CCSG_TriangleVec_Destroy(@as(*c.CCSG_TriangleVec, @ptrCast(list)));
+    }
+    pub fn getSlice(list: *TriangleList) ?[]const Triangle {
+        var ptr: [*c]Triangle = null;
+        const len = c.CCSG_TriangleVec_GetPtr(
+            @as(*const c.CCSG_TriangleVec, @ptrCast(list)),
+            @as([*c][*c] c.CCSG_Triangle, @ptrCast(&ptr)),
+        );
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
+    }
+};
+
+//--------------------------------------------------------------------------------------------------
+// Misc.
+//--------------------------------------------------------------------------------------------------
+pub fn triangulate(fragment: *const Fragment) *TriangleList {
+    return @as(*TriangleList, @ptrCast(c.CCSG_Triangulate(@as(*const c.CCSG_Fragment, @ptrCast(fragment)))));
+}
 
 //--------------------------------------------------------------------------------------------------
 // Tests
@@ -181,7 +372,7 @@ test "ccsg.helloworld" {
 
 test "helloworld" {
     if (options.use_custom_alloc) try init_allocator(std.testing.allocator);
-    const world = World.create();
-    world.destroy();
+    const world = World.init();
+    world.deinit();
     if (options.use_custom_alloc) deinit_allocator();
 }

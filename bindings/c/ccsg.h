@@ -7,8 +7,9 @@ extern "C" {
 //--------------------------------------------------------------------------------------------------
 // Opaque Types
 //--------------------------------------------------------------------------------------------------
-typedef struct CCSG_World CCSG_World;
-typedef struct CCSG_Brush CCSG_Brush;
+typedef struct CCSG_World           CCSG_World;
+typedef struct CCSG_Brush           CCSG_Brush;
+typedef struct CCSG_VolumeOperation CCSG_VolumeOperation;
 
 typedef struct CCSG_BrushSet          CCSG_BrushSet;
 typedef struct CCSG_BrushSet_Iterator CCSG_BrushSet_Iterator;
@@ -23,7 +24,6 @@ typedef struct CCSG_TriangleVec CCSG_TriangleVec;
 // Reinterpreted Types - Must maintain these in sync with csg types
 //--------------------------------------------------------------------------------------------------
 typedef int CCSG_Volume;
-typedef CCSG_Volume (*CCSG_VolumeOperation)(CCSG_Volume);
 typedef float CCSG_Vec3[3];
 typedef float CCSG_Mat4[16];
 
@@ -34,18 +34,18 @@ typedef struct CCSG_Plane {
 
 typedef struct CCSG_Face {
     const CCSG_Plane *plane;
-    const void* __private_0[3];
-    const void* __private_1[3];
+    const void* _private_0[3];
+    const void* _private_1[3];
 } CCSG_Face;
 
 typedef struct CCSG_Fragment {
     CCSG_Face *face;
-    const void* __private_0[3];
+    const void* _private_0[3];
     CCSG_Volume front_volume;
     CCSG_Volume back_volume;
     CCSG_Brush *front_brush;
     CCSG_Brush *back_brush;
-    int __private_1;
+    int _private_1;
 } CCSG_Fragment;
 
 typedef struct CCSG_Ray {
@@ -110,21 +110,33 @@ void
 CCSG_BrushVec_Destroy(CCSG_BrushVec *vec);
 
 size_t // Return value is length of array
-CCSG_BrushVec_GetPtr(CCSG_BrushVec *vec, const CCSG_Brush *const **out_array);
+CCSG_BrushVec_GetPtr(const CCSG_BrushVec *vec, const CCSG_Brush *const **out_array);
 
 //--------------------------------------------------------------------------------------------------
 void
 CCSG_RayHitVec_Destroy(CCSG_RayHitVec *vec);
 
 size_t // Return value is length of array
-CCSG_RayHitVec_GetPtr(CCSG_RayHitVec *vec, const CCSG_RayHit **out_array);
+CCSG_RayHitVec_GetPtr(const CCSG_RayHitVec *vec, const CCSG_RayHit **out_array);
 
 //--------------------------------------------------------------------------------------------------
 void
-CCSG_TriangleVec_Destroy(CCSG_PlaneVec *vec);
+CCSG_TriangleVec_Destroy(CCSG_TriangleVec *vec);
 
 size_t // Return value is length of array
-CCSG_TriangleVec_GetPtr(CCSG_TriangleVec *vec, const CCSG_Triangle **out_array);
+CCSG_TriangleVec_GetPtr(const CCSG_TriangleVec *vec, const CCSG_Triangle **out_array);
+
+//--------------------------------------------------------------------------------------------------
+// Volume Operations
+//--------------------------------------------------------------------------------------------------
+CCSG_VolumeOperation*
+CCSG_MakeFillOperation(CCSG_Volume volume);
+
+CCSG_VolumeOperation*
+CCSG_MakeConvertOperation(CCSG_Volume from, CCSG_Volume to);
+
+void
+CCSG_VolumeOperation_Destroy(CCSG_VolumeOperation *operation);
 
 //--------------------------------------------------------------------------------------------------
 // CCSG_World
@@ -184,7 +196,7 @@ const CCSG_PlaneVec* // Returns pointer to library-owned memory. The caller may 
 CCSG_Brush_GetPlanes(const CCSG_Brush *brush);
 
 void
-CCSG_Brush_SetVolumeOperation(CCSG_Brush *brush, const CCSG_VolumeOperation operation);
+CCSG_Brush_SetVolumeOperation(CCSG_Brush *brush, const CCSG_VolumeOperation *operation);
 
 const CCSG_FaceVec* // Returns pointer to library-owned memory. The caller may not manipulate nor free it.
 CCSG_Brush_GetFaces(const CCSG_Brush *brush);
@@ -211,16 +223,25 @@ CCSG_Brush_SetUserData(CCSG_Brush *brush, void *user_data);
 // CCSG_Fragment
 //--------------------------------------------------------------------------------------------------
 size_t // Return value is length of array
-CCSG_Fragment_GetVerticesPtr(CCSG_Fragment *fragment, const CCSG_Vertex **out_array);
+CCSG_Fragment_GetVerticesPtr(const CCSG_Fragment *fragment, const CCSG_Vertex **out_array);
 
 //--------------------------------------------------------------------------------------------------
 // CCSG_Face
 //--------------------------------------------------------------------------------------------------
 size_t // Return value is length of array
-CCSG_Face_GetVerticesPtr(CCSG_Face *face, const CCSG_Vertex **out_array);
+CCSG_Face_GetVerticesPtr(const CCSG_Face *face, const CCSG_Vertex **out_array);
 
 size_t // Return value is length of array
-CCSG_Face_GetFragmentsPtr(CCSG_Face *face, const CCSG_Fragment **out_array);
+CCSG_Face_GetFragmentsPtr(const CCSG_Face *face, const CCSG_Fragment **out_array);
+
+size_t // Return value is length of array
+CCSG_FaceVec_GetPtr(const CCSG_FaceVec *vec, const CCSG_Face **outArray);
+
+//--------------------------------------------------------------------------------------------------
+// Misc.
+//--------------------------------------------------------------------------------------------------
+CCSG_TriangleVec* // Returns a pointer to copied memory that will be owned and freed by the caller.
+CCSG_Triangulate(const CCSG_Fragment *fragment);
 
 //--------------------------------------------------------------------------------------------------
 #ifdef __cplusplus
