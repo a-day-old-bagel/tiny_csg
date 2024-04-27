@@ -75,7 +75,7 @@ volume_operation_t make_convert_operation(volume_t from, volume_t to);
 struct vertex_t {
     csg_replace_new_delete
     glm::vec3 position;
-    vector_t<face_t*> faces;
+    set_t<face_t*> faces;
 };
 
 struct triangle_t {

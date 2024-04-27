@@ -179,9 +179,6 @@ static bool try_make_vertex(face_t *f0, face_t *f1, face_t *f2, vertex_t& v) {
     // printf("mz = %s\n", glm::to_string(mz).c_str());
     // fflush(stdout);    
 
-    v.faces.push_back(f0);
-    v.faces.push_back(f1);
-    v.faces.push_back(f2);
     v.position = glm::vec3(
         glm::determinant(mx) / D,
         glm::determinant(my) / D,
@@ -255,6 +252,10 @@ static void rebuild_faces_and_box(brush_t *brush) {
         if (try_make_vertex(facei, facej, facek, v) &&
             test(&v, brush) != RELATION_OUTSIDE)
         {
+            v.faces.insert(facei);
+            v.faces.insert(facej);
+            v.faces.insert(facek);
+
             facei->vertices.push_back(v);
             facej->vertices.push_back(v);
             facek->vertices.push_back(v);
@@ -311,6 +312,9 @@ static void split(fragment_t* fragment, face_t* splitter, fragment_t* front, fra
                 pieces[c0]->vertices.push_back(v0);
                 continue;
             }
+            v.faces.insert(edge.faces[0]);
+            v.faces.insert(edge.faces[1]);
+            v.faces.insert(splitter);
             if (c0 == RELATION_ALIGNED) {
                 pieces[c1]->vertices.push_back(v);
             } else if (c1 == RELATION_ALIGNED) {
