@@ -269,10 +269,18 @@ void
 CCSG_World_Destroy(CCSG_World *world) { delete toCpp(world); }
 
 CCSG_Brush*
-CCSG_World_First(CCSG_World *world) { return toC(toCpp(world)->first()); }
+CCSG_World_First(CCSG_World *world) {
+    auto first = toCpp(world)->first();
+    if (!first) return nullptr;
+    return toC(first);
+}
 
 CCSG_Brush*
-CCSG_World_Next(CCSG_World *world, CCSG_Brush *brush) { return toC(toCpp(world)->next(toCpp(brush))); }
+CCSG_World_Next(CCSG_World *world, CCSG_Brush *brush) {
+    auto next = toCpp(world)->next(toCpp(brush));
+    if (!next) return nullptr;
+    return toC(next);
+}
 
 void
 CCSG_World_Remove(CCSG_World *world, CCSG_Brush *brush) { toCpp(world)->remove(toCpp(brush)); }

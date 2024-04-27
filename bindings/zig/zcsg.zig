@@ -232,12 +232,12 @@ pub const World = opaque {
     }
 
     pub fn first(world: *World) ?*Brush {
-        return @as(*Brush, @ptrCast(c.CCSG_World_First(@as(*c.CCSG_World, @ptrCast(world)))));
+        const result = c.CCSG_World_First(@as(*c.CCSG_World, @ptrCast(world)));
+        return if (result == null) null else @as(*Brush, @ptrCast(result));
     }
     pub fn next(world: *World, brush: *Brush) ?*Brush {
-        return @as(*Brush, @ptrCast(
-            c.CCSG_World_Next(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)))
-        ));
+        const result = c.CCSG_World_Next(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)));
+        return if (result == null) null else @as(*Brush, @ptrCast(result));
     }
     pub fn remove(world: *World, brush: *Brush) void {
         c.CCSG_World_Remove(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)));
