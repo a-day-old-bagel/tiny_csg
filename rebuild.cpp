@@ -239,6 +239,7 @@ static void rebuild_faces_and_box(brush_t *brush) {
 
     }
 
+    vector_t<vertex_t> vshare;
     bool box_initialized = false;
 
     // build new vertices by intersecting each combination of 3 planes
@@ -249,16 +250,24 @@ static void rebuild_faces_and_box(brush_t *brush) {
         face_t *facej = &brush->faces[j];
         face_t *facek = &brush->faces[k];
         vertex_t v;
-        if (try_make_vertex(facei, facej, facek, v) &&
-            test(&v, brush) != RELATION_OUTSIDE)
-        {
-            v.faces.insert(facei);
-            v.faces.insert(facej);
-            v.faces.insert(facek);
+        if (try_make_vertex(facei, facej, facek, v) && test(&v, brush) != RELATION_OUTSIDE) {
+            bool found_shared = false;
+            for (auto& shared: vshare) { // TODO: Better spatial search/hash? Or not necessary?
+                if (glm::length(shared.position - v.position) < 0.001) {
+                    shared.faces.insert(facei);
+                    shared.faces.insert(facej);
+                    shared.faces.insert(facek);
+                    found_shared = true;
+                    break;
+                }
+            }
+            if (!found_shared) {
+                v.faces.insert(facei);
+                v.faces.insert(facej);
+                v.faces.insert(facek);
+                vshare.push_back(v);
+            }
 
-            facei->vertices.push_back(v);
-            facej->vertices.push_back(v);
-            facek->vertices.push_back(v);
             if (!box_initialized) {
                 brush->box = box_t{ v.position, v.position };
                 box_initialized = true;
@@ -266,7 +275,13 @@ static void rebuild_faces_and_box(brush_t *brush) {
                 brush->box = extended(brush->box, v.position);
             }
         }
-    }    
+    }
+
+    for (const auto& vert: vshare) {
+        for (auto& face: vert.faces) {
+            face->vertices.push_back(vert);
+        }
+    }
 
     // order the vertices correctly
     for (auto& face: brush->faces) {
