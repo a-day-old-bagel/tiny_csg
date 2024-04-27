@@ -134,6 +134,21 @@ static bool try_get_edge(const vertex_t* vertex0, const vertex_t* vertex1, edge_
     }
 }
 
+//static bool try_get_edge(const vertex_t* v0, const vertex_t* v1, edge_t* edge) {
+//    face_t *first_match = nullptr;
+//    for (auto f0: v0->faces) {
+//        for (auto f1: v1->faces) if (f0 == f1) {
+//            if (first_match == nullptr) {
+//                first_match = f0;
+//            } else {
+//                if (edge) *edge = edge_t{{first_match, f0}};
+//                return true;
+//            }
+//        }
+//    }
+//    return false;
+//}
+
 static bool try_make_vertex(face_t *f0, face_t *f1, face_t *f2, vertex_t& v) {
     // intersect three planes, use cramer's rule
     std::array<face_t*, 3> faces = {f0, f1, f2};
@@ -179,9 +194,6 @@ static bool try_make_vertex(face_t *f0, face_t *f1, face_t *f2, vertex_t& v) {
     // printf("mz = %s\n", glm::to_string(mz).c_str());
     // fflush(stdout);    
 
-    v.faces[0] = f0;
-    v.faces[1] = f1;
-    v.faces[2] = f2;
     v.position = glm::vec3(
         glm::determinant(mx) / D,
         glm::determinant(my) / D,
@@ -189,6 +201,104 @@ static bool try_make_vertex(face_t *f0, face_t *f1, face_t *f2, vertex_t& v) {
     );  
     return true;
 }
+
+//static void order_vertices(brush_t *brush, face_t* face) {
+//    // use the info we have on the vertices (the planes that meet in the vertex)
+//    // to order the vertices properly without any floating point calculations
+//    vector_t<int> unsorted = move(face->vertices);
+//    face->vertices.clear();
+//
+//    set_t<int> duplicate_remover(unsorted.begin(), unsorted.end());
+//    unsorted.assign(duplicate_remover.begin(), duplicate_remover.end());
+//
+//    fprintf(stderr, "\nunsorted:\n");
+//    for (auto idx: unsorted) fprintf(stderr, "%f %f %f\n", brush->vertices[idx].position.x, brush->vertices[idx].position.y, brush->vertices[idx].position.z);
+//    fprintf(stderr, "sorted:\n");
+//
+//    int unsorted_idx = unsorted.size();
+//    while (unsorted_idx >= 0) {
+//        fprintf(stderr, "%f %f %f\n", brush->vertices[unsorted.back()].position.x, brush->vertices[unsorted.back()].position.y, brush->vertices[unsorted.back()].position.z);
+//        face->vertices.push_back(unsorted.back());
+//        unsorted.pop_back();
+//        for (unsorted_idx = unsorted.size() - 1; unsorted_idx > 0; --unsorted_idx) {
+//            vertex_t *vert0 = &brush->vertices[face->vertices.back()];
+//            vertex_t *vert1 = &brush->vertices[unsorted_idx];
+//            if (try_get_edge(vert0, vert1, nullptr)) {
+//                std::swap(unsorted.at(unsorted_idx), unsorted.back());
+//                break;
+//            }
+//        }
+//    }
+//
+//    fprintf(stderr, "\n");
+////    fprintf(stderr, "\nunsorted left: %llu\n\n", unsorted.size());
+//
+////    auto curr = unsorted.begin();
+////    while (curr != unsorted.end()) {
+////        int v = *curr;
+////        face->vertices.push_back(v);
+////        unsorted.erase(curr);
+////
+////        curr = unsorted.end();
+////        for (auto vert_idx: unsorted) {
+////            auto *vert0 = &(brush->vertices[v]);
+////            auto *vert1 = &(brush->vertices[vert_idx]);
+////            if (try_get_edge(vert0, vert1, nullptr)) curr = &(unsorted[vert_idx]);
+////        }
+////
+//////        curr = std::find_if(unsorted.begin(), unsorted.end(), [=](int other) {
+//////            // does an edge exist between v and other?
+//////            return try_get_edge(&(brush->vertices[v]), &(brush->vertices[other]), NULL);
+//////        });
+////    }
+//
+//}
+//
+
+
+//static void order_vertices(brush_t *brush, face_t* face) {
+//    // use the info we have on the vertices (the planes that meet in the vertex)
+//    // to order the vertices properly without any floating point calculations
+//    vector_t<int> unsorted = move(face->vertices);
+//    face->vertices.clear();
+//
+//    set_t<int> duplicate_remover(unsorted.begin(), unsorted.end());
+//    unsorted.assign(duplicate_remover.begin(), duplicate_remover.end());
+//
+//    fprintf(stderr, "\nunsorted:\n");
+//    for (auto idx: unsorted) fprintf(stderr, "%f %f %f\n", brush->vertices[idx].position.x, brush->vertices[idx].position.y, brush->vertices[idx].position.z);
+//    fprintf(stderr, "sorted:\n");
+//
+//    auto curr = unsorted.begin();
+//    while (curr != unsorted.end()) {
+//        int v = *curr;
+//        face->vertices.push_back(v);
+//        fprintf(stderr, "%f %f %f\n", brush->vertices[face->vertices.back()].position.x, brush->vertices[face->vertices.back()].position.y, brush->vertices[face->vertices.back()].position.z);
+//        unsorted.erase(curr);
+//        curr = std::find_if(unsorted.begin(), unsorted.end(), [=](int other) {
+//            // does an edge exist between v and other?
+//            return try_get_edge(&(brush->vertices[v]), &(brush->vertices[other]), NULL);
+//        });
+//    }
+//}
+//
+//static void fix_winding(brush_t *brush, face_t* face) {
+//    // just reverse the order of vertices if the polygon normal doesn't
+//    // match the plane normal
+//    if (face->vertices.size() < 3)
+//        return;
+//    glm::vec3 v0 = brush->vertices[face->vertices[0]].position;
+//    glm::vec3 v1 = brush->vertices[face->vertices[1]].position;
+//    glm::vec3 v2 = brush->vertices[face->vertices[2]].position;
+//
+//    float d = dot(cross(v1-v0, v2-v0), face->plane->normal);
+//    if (d < 0) {
+//        reverse(face->vertices.begin(), face->vertices.end());
+//    }
+//}
+
+
+
 
 static void order_vertices(face_t* face) {
     // use the info we have on the vertices (the planes that meet in the vertex)
@@ -223,6 +333,9 @@ static void fix_winding(face_t* face) {
     }
 }
 
+
+
+
 static void rebuild_faces_and_box(brush_t *brush) {
     // printf("rebuild_faces_and_box\n"); fflush(stdout);
 
@@ -242,6 +355,9 @@ static void rebuild_faces_and_box(brush_t *brush) {
 
     }
 
+    vector_t<vertex_t> vertex_aggregator;
+    std::unordered_map<face_t*, std::unordered_set<int>> agg_indices;
+
     bool box_initialized = false;
 
     // build new vertices by intersecting each combination of 3 planes
@@ -255,9 +371,30 @@ static void rebuild_faces_and_box(brush_t *brush) {
         if (try_make_vertex(facei, facej, facek, v) &&
             test(&v, brush) != RELATION_OUTSIDE)
         {
-            facei->vertices.push_back(v);
-            facej->vertices.push_back(v);
-            facek->vertices.push_back(v);
+            int nearby_vertex_idx = -1;
+            for (int i=0; i<vertex_aggregator.size(); ++i) { // TODO: Better spatial search/hash
+                if (glm::length(vertex_aggregator[i].position - v.position) < 0.001) {
+                    nearby_vertex_idx = i;
+                    break;
+                }
+            }
+            if (nearby_vertex_idx < 0) {
+                vertex_aggregator.push_back(v);
+                nearby_vertex_idx = vertex_aggregator.size() - 1;
+                auto &top = vertex_aggregator.back();
+            }
+//            facei->vertices.push_back(nearby_vertex_idx);
+//            facej->vertices.push_back(nearby_vertex_idx);
+//            facek->vertices.push_back(nearby_vertex_idx);
+
+            agg_indices[facei].insert(nearby_vertex_idx);
+            agg_indices[facej].insert(nearby_vertex_idx);
+            agg_indices[facek].insert(nearby_vertex_idx);
+
+            vertex_aggregator[nearby_vertex_idx].faces.push_back(facei);
+            vertex_aggregator[nearby_vertex_idx].faces.push_back(facej);
+            vertex_aggregator[nearby_vertex_idx].faces.push_back(facek);
+
             if (!box_initialized) {
                 brush->box = box_t{ v.position, v.position };
                 box_initialized = true;
@@ -265,10 +402,50 @@ static void rebuild_faces_and_box(brush_t *brush) {
                 brush->box = extended(brush->box, v.position);
             }
         }
-    }    
+    }
+
+//    fprintf(stderr, "\n");
+//    size_t vi = 0;
+    for (auto& v: vertex_aggregator) {
+        set_t<face_t*> duplicate_remover(v.faces.begin(), v.faces.end());
+        v.faces.assign(duplicate_remover.begin(), duplicate_remover.end());
+//        fprintf(stderr, "Vertex %llu: %f %f %f\n", vi++, v.position.x, v.position.y, v.position.z);
+//        for (auto f: v.faces) fprintf(stderr, "%x\n", f);
+    }
+//    fprintf(stderr, "\n");
+
+    for (const auto& [face, vert_indices] : agg_indices) {
+        for (const auto& idx: vert_indices)
+            face->vertices.push_back(vertex_aggregator[idx]);
+    }
 
     // order the vertices correctly
     for (auto& face: brush->faces) {
+
+        fprintf(stderr, "\nFace: %x\n", &face);
+        size_t vi = 0;
+        for (const auto& v: face.vertices) {
+            fprintf(stderr, "Vertex %llu: %f %f %f\n", vi++, v.position.x, v.position.y, v.position.z);
+            for (const auto* f: v.faces) {
+                fprintf(stderr, "Face: %x\n", f);
+            }
+        }
+
+//        vector_t<std::pair<vertex_t, int>> unsorted;
+//        unsorted.resize(face.vertices.size());
+//        for (int v=0; v<face.vertices.size(); ++v) {
+//            unsorted[v] = std::make_pair(brush->vertices[face.vertices[v]], face.vertices[v]);
+//        }
+//
+//        order_vertices(unsorted);
+//
+//        face.vertices.clear();
+//        for (auto pair: unsorted) face.vertices.push_back(pair.second);
+
+
+//        set_t<int> duplicate_remover(face.vertices.begin(), face.vertices.end());
+//        face.vertices.assign(duplicate_remover.begin(), duplicate_remover.end());
+
         order_vertices(&face);
         fix_winding(&face);
     }
@@ -322,7 +499,7 @@ static void split(fragment_t* fragment, face_t* splitter, fragment_t* front, fra
                 pieces[c1]->vertices.push_back(v);
             }
         } else {
-            pieces[c0]->vertices.push_back(v0);
+            pieces[c0]->vertices.push_back(v0); // FIXME: Crashed here with c0 == c1 == RELATION_ALIGNED, and it appeared that v0 == v1 as well. Since i == 2 and j == 3, fragment had overlapping vertices.
         }
     }
 }

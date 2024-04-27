@@ -53,7 +53,7 @@ LAYOUT_ASSERTS(CCSG_Plane, csg::plane_t, offset, offset)
 LAYOUT_ASSERTS(CCSG_Ray, csg::ray_t, direction, direction)
 LAYOUT_ASSERTS(CCSG_RayHit, csg::ray_hit_t, position, position)
 LAYOUT_ASSERTS(CCSG_Box, csg::box_t, max, max)
-LAYOUT_ASSERTS(CCSG_Vertex, csg::vertex_t, position, position)
+LAYOUT_ASSERTS(CCSG_Vertex, csg::vertex_t, _private_0, faces)
 LAYOUT_ASSERTS(CCSG_Triangle, csg::triangle_t, k, k)
 
 LAYOUT_ASSERTS(CCSG_Fragment, csg::fragment_t, back_brush, back_brush)
@@ -269,10 +269,18 @@ void
 CCSG_World_Destroy(CCSG_World *world) { delete toCpp(world); }
 
 CCSG_Brush*
-CCSG_World_First(CCSG_World *world) { return toC(toCpp(world)->first()); }
+CCSG_World_First(CCSG_World *world) {
+    auto first = toCpp(world)->first();
+    if (!first) return nullptr;
+    return toC(first);
+}
 
 CCSG_Brush*
-CCSG_World_Next(CCSG_World *world, CCSG_Brush *brush) { return toC(toCpp(world)->next(toCpp(brush))); }
+CCSG_World_Next(CCSG_World *world, CCSG_Brush *brush) {
+    auto next = toCpp(world)->next(toCpp(brush));
+    if (!next) return nullptr;
+    return toC(next);
+}
 
 void
 CCSG_World_Remove(CCSG_World *world, CCSG_Brush *brush) { toCpp(world)->remove(toCpp(brush)); }

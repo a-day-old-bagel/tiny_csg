@@ -116,13 +116,16 @@ pub const Face = extern struct {
     _pad0: [3]*const anyopaque,
     _pad1: [3]*const anyopaque,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Face)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Face));
+        std.debug.assert(@offsetOf(@This(), "_pad1") == @offsetOf(c.CCSG_Face, "_private_1"));
+    }
 
     pub fn getVertices(face: *const Face) ?[]const Vertex {
-        var ptr: [*c]Vertex = null;
+        var ptr: ?[*]Vertex = null;
         const len = c.CCSG_Face_GetVerticesPtr(
             @as(*const c.CCSG_Face, @ptrCast(face)),
-            @as([*c][*c] c.CCSG_Vertex, @ptrCast(&ptr)),
+            @as(*?[*] Vertex, @ptrCast(&ptr)),
         );
         if (ptr) |array| {
             return array[0..len];
@@ -130,10 +133,10 @@ pub const Face = extern struct {
         return null;
     }
     pub fn getFragments(face: *const Face) ?[]const Fragment {
-        var ptr: [*c]Fragment = null;
+        var ptr: ?[*]Fragment = null;
         const len = c.CCSG_Face_GetFragmentsPtr(
             @as(*const c.CCSG_Face, @ptrCast(face)),
-            @as([*c][*c] c.CCSG_Fragment, @ptrCast(&ptr)),
+            @as(*?[*] c.CCSG_Fragment, @ptrCast(&ptr)),
         );
         if (ptr) |array| {
             return array[0..len];
@@ -151,13 +154,16 @@ pub const Fragment = extern struct {
     back_brush: *Brush,
     _pad1: i32,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Fragment)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Fragment));
+        std.debug.assert(@offsetOf(@This(), "_pad1") == @offsetOf(c.CCSG_Fragment, "_private_1"));
+    }
 
     pub fn getVertices(fragment: *const Fragment) ?[]const Vertex {
-        var ptr: [*c]Vertex = null;
+        var ptr: ?[*]Vertex = null;
         const len = c.CCSG_Fragment_GetVerticesPtr(
             @as(*const c.CCSG_Fragment, @ptrCast(fragment)),
-            @as([*c][*c] c.CCSG_Vertex, @ptrCast(&ptr)),
+            @as(*?[*] c.CCSG_Vertex, @ptrCast(&ptr)),
         );
         if (ptr) |array| {
             return array[0..len];
@@ -170,7 +176,10 @@ pub const Ray = extern struct {
     origin: Vec3,
     direction: Vec3,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Ray)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Ray));
+        std.debug.assert(@offsetOf(@This(), "direction") == @offsetOf(c.CCSG_Ray, "direction"));
+    }
 };
 
 pub const RayHit = extern struct {
@@ -180,21 +189,30 @@ pub const RayHit = extern struct {
     parameter: f32,
     position: Vec3,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_RayHit)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_RayHit));
+        std.debug.assert(@offsetOf(@This(), "position") == @offsetOf(c.CCSG_RayHit, "position"));
+    }
 };
 
 pub const Box = extern struct {
     min: Vec3,
     max: Vec3,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Box)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Box));
+        std.debug.assert(@offsetOf(@This(), "max") == @offsetOf(c.CCSG_Box, "max"));
+    }
 };
 
 pub const Vertex = extern struct {
-    faces: [3]*const Face,
     position: Vec3,
+    _pad0: [3]*const anyopaque,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Vertex)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Vertex));
+        std.debug.assert(@offsetOf(@This(), "_pad0") == @offsetOf(c.CCSG_Vertex, "_private_0"));
+    }
 };
 
 pub const Triangle = extern struct {
@@ -202,7 +220,10 @@ pub const Triangle = extern struct {
     j: i32,
     k: i32,
 
-    comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Triangle)); }
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Triangle));
+        std.debug.assert(@offsetOf(@This(), "k") == @offsetOf(c.CCSG_Triangle, "k"));
+    }
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -232,12 +253,12 @@ pub const World = opaque {
     }
 
     pub fn first(world: *World) ?*Brush {
-        return @as(*Brush, @ptrCast(c.CCSG_World_First(@as(*c.CCSG_World, @ptrCast(world)))));
+        const result = c.CCSG_World_First(@as(*c.CCSG_World, @ptrCast(world)));
+        return if (result == null) null else @as(*Brush, @ptrCast(result));
     }
     pub fn next(world: *World, brush: *Brush) ?*Brush {
-        return @as(*Brush, @ptrCast(
-            c.CCSG_World_Next(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)))
-        ));
+        const result = c.CCSG_World_Next(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)));
+        return if (result == null) null else @as(*Brush, @ptrCast(result));
     }
     pub fn remove(world: *World, brush: *Brush) void {
         c.CCSG_World_Remove(@as(*c.CCSG_World, @ptrCast(world)), @as(*c.CCSG_Brush, @ptrCast(brush)));
@@ -248,6 +269,13 @@ pub const World = opaque {
 
     pub fn rebuild(world: *World) *BrushSet {
         return @as(*BrushSet, @ptrCast(c.CCSG_World_Rebuild(@as(*c.CCSG_World, @ptrCast(world)))));
+    }
+
+    pub fn setVoidVolume(world: *World, volume: Volume) void {
+        c.CCSG_World_SetVoidVolume(@as(*c.CCSG_World, @ptrCast(world)), volume);
+    }
+    pub fn getVoidVolume(world: *const World) Volume {
+        return c.CCSG_World_GetVoidVolume(@as(*const c.CCSG_World, @ptrCast(world)));
     }
 };
 
@@ -272,8 +300,8 @@ pub const Brush = opaque {
 
     pub fn getFaces(brush: *const Brush) ?[]const Face {
         const vec = c.CCSG_Brush_GetFaces(@as(*const c.CCSG_Brush, @ptrCast(brush))) orelse return null;
-        var ptr: [*c]Face = null;
-        const len = c.CCSG_FaceVec_GetPtr(vec, @as([*c][*c] c.CCSG_Face, @ptrCast(&ptr)));
+        var ptr: ?[*]Face = null;
+        const len = c.CCSG_FaceVec_GetPtr(vec, @as(*?[*] c.CCSG_Face, @ptrCast(&ptr)));
         if (ptr) |array| {
             return array[0..len];
         }
@@ -313,10 +341,10 @@ pub const BrushList = opaque {
         c.CCSG_BrushVec_Destroy(@as(*c.CCSG_BrushVec, @ptrCast(list)));
     }
     pub fn getSlice(list: *BrushList) ?[]const *Brush {
-        var ptr: [*c]*Brush = null;
+        var ptr: ?[*]*Brush = null;
         const len = c.CCSG_BrushVec_GetPtr(
             @as(*const c.CCSG_BrushVec, @ptrCast(list)),
-            @as([*c][*c] *c.CCSG_Brush, @ptrCast(&ptr)),
+            @as(*?[*] *c.CCSG_Brush, @ptrCast(&ptr)),
         );
         if (ptr) |array| {
             return array[0..len];
@@ -330,10 +358,10 @@ pub const RayHitList = opaque {
         c.CCSG_RayHitVec_Destroy(@as(*c.CCSG_RayHitVec, @ptrCast(list)));
     }
     pub fn getSlice(list: *RayHitList) ?[]const RayHit {
-        var ptr: [*c]RayHit = null;
+        var ptr: ?[*]RayHit = null;
         const len = c.CCSG_RayHitVec_GetPtr(
             @as(*const c.CCSG_RayHitVec, @ptrCast(list)),
-            @as([*c][*c] c.CCSG_RayHit, @ptrCast(&ptr)),
+            @as(*?[*] c.CCSG_RayHit, @ptrCast(&ptr)),
         );
         if (ptr) |array| {
             return array[0..len];
@@ -347,10 +375,10 @@ pub const TriangleList = opaque {
         c.CCSG_TriangleVec_Destroy(@as(*c.CCSG_TriangleVec, @ptrCast(list)));
     }
     pub fn getSlice(list: *TriangleList) ?[]const Triangle {
-        var ptr: [*c]Triangle = null;
+        var ptr: ?[*]Triangle = null;
         const len = c.CCSG_TriangleVec_GetPtr(
             @as(*const c.CCSG_TriangleVec, @ptrCast(list)),
-            @as([*c][*c] c.CCSG_Triangle, @ptrCast(&ptr)),
+            @as(*?[*] c.CCSG_Triangle, @ptrCast(&ptr)),
         );
         if (ptr) |array| {
             return array[0..len];
