@@ -488,6 +488,9 @@ static void split(fragment_t* fragment, face_t* splitter, fragment_t* front, fra
                 pieces[c0]->vertices.push_back(v0);
                 continue;
             }
+            v.faces.push_back(edge.faces[0]);
+            v.faces.push_back(edge.faces[1]);
+            v.faces.push_back(splitter);
             if (c0 == RELATION_ALIGNED) {
                 pieces[c1]->vertices.push_back(v);
             } else if (c1 == RELATION_ALIGNED) {
