@@ -65,8 +65,8 @@ typedef struct CCSG_Box {
 } CCSG_Box;
 
 typedef struct CCSG_Vertex {
-    CCSG_Face *faces[3];
     CCSG_Vec3 position;
+    const void* _private_0[3];
 } CCSG_Vertex;
 
 typedef struct CCSG_Triangle {

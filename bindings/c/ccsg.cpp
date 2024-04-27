@@ -53,7 +53,7 @@ LAYOUT_ASSERTS(CCSG_Plane, csg::plane_t, offset, offset)
 LAYOUT_ASSERTS(CCSG_Ray, csg::ray_t, direction, direction)
 LAYOUT_ASSERTS(CCSG_RayHit, csg::ray_hit_t, position, position)
 LAYOUT_ASSERTS(CCSG_Box, csg::box_t, max, max)
-LAYOUT_ASSERTS(CCSG_Vertex, csg::vertex_t, position, position)
+LAYOUT_ASSERTS(CCSG_Vertex, csg::vertex_t, _private_0, faces)
 LAYOUT_ASSERTS(CCSG_Triangle, csg::triangle_t, k, k)
 
 LAYOUT_ASSERTS(CCSG_Fragment, csg::fragment_t, back_brush, back_brush)

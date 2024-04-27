@@ -191,8 +191,8 @@ pub const Box = extern struct {
 };
 
 pub const Vertex = extern struct {
-    faces: [3]*const Face,
     position: Vec3,
+    _pad0: [3]*const anyopaque,
 
     comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Vertex)); }
 };

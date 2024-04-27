@@ -179,9 +179,9 @@ static bool try_make_vertex(face_t *f0, face_t *f1, face_t *f2, vertex_t& v) {
     // printf("mz = %s\n", glm::to_string(mz).c_str());
     // fflush(stdout);    
 
-    v.faces[0] = f0;
-    v.faces[1] = f1;
-    v.faces[2] = f2;
+    v.faces.push_back(f0);
+    v.faces.push_back(f1);
+    v.faces.push_back(f2);
     v.position = glm::vec3(
         glm::determinant(mx) / D,
         glm::determinant(my) / D,
