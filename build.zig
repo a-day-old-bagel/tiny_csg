@@ -20,14 +20,14 @@ pub fn build(b: *std.Build) void {
     const options_module = options_step.createModule();
 
     const zcsg = b.addModule("root", .{
-        .root_source_file = .{ .path = "bindings/zig/zcsg.zig" },
+        .root_source_file = b.path("bindings/zig/zcsg.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
             .{ .name = "zcsg_options", .module = options_module },
         },
     });
-    zcsg.addIncludePath(.{ .path = "bindings/c" });
+    zcsg.addIncludePath(b.path("bindings/c"));
 
     const ccsg = b.addStaticLibrary(.{
         .name = "ccsg",
@@ -37,8 +37,8 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(ccsg);
 
     if (options.use_custom_alloc) ccsg.defineCMacro("CSG_CUSTOM_ALLOCATOR_HEADER", "\"bindings/c/ccsg_memory.hpp\"");
-    ccsg.addIncludePath(.{ .path = "./" });
-    ccsg.addIncludePath(.{ .path = "3rdp/glm" });
+    ccsg.addIncludePath(b.path("./"));
+    ccsg.addIncludePath(b.path("3rdp/glm"));
     ccsg.linkLibC();
     if (target.result.abi != .msvc)
         ccsg.linkLibCpp();
@@ -63,7 +63,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run zcsg tests");
     const tests = b.addTest(.{
         .name = "zscg-tests",
-        .root_source_file = .{ .path = "bindings/zig/zcsg.zig" },
+        .root_source_file = b.path("bindings/zig/zcsg.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -76,14 +76,14 @@ pub fn build(b: *std.Build) void {
 
     if (options.use_custom_alloc) tests.defineCMacro("CSG_CUSTOM_ALLOCATOR_HEADER", "\"bindings/c/ccsg_memory.hpp\"");
     tests.addCSourceFile(.{
-        .file = .{ .path = "bindings/c/ccsg_tests.c" },
+        .file = b.path("bindings/c/ccsg_tests.c"),
         .flags = &.{
             "-fno-sanitize=undefined",
         },
     });
 
     tests.root_module.addImport("zcsg_options", options_module);
-    tests.addIncludePath(.{ .path = "bindings/c" });
+    tests.addIncludePath(b.path("bindings/c"));
     tests.linkLibrary(ccsg);
 
     test_step.dependOn(&b.addRunArtifact(tests).step);
