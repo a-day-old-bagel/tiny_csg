@@ -167,8 +167,8 @@ pub const Fragment = extern struct {
 };
 
 pub const Ray = extern struct {
-    origin: Vec3,
-    direction: Vec3,
+    origin: Vec3 = undefined,
+    direction: Vec3 = undefined,
 
     comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Ray)); }
 };
@@ -184,8 +184,17 @@ pub const RayHit = extern struct {
 };
 
 pub const Box = extern struct {
-    min: Vec3,
-    max: Vec3,
+    min: Vec3 = .{ 0, 0, 0 },
+    max: Vec3 = .{ 0, 0, 0 },
+
+    pub fn encompass(box: *Box, other: Box) void {
+        const box_min: @Vector(3, f32) = box.min;
+        const box_max: @Vector(3, f32) = box.max;
+        const other_min: @Vector(3, f32) = other.min;
+        const other_max: @Vector(3, f32) = other.max;
+        box.min = @min(box_min, other_min);
+        box.max = @max(box_max, other_max);
+    }
 
     comptime { std.debug.assert(@sizeOf(@This()) == @sizeOf(c.CCSG_Box)); }
 };
@@ -249,6 +258,31 @@ pub const World = opaque {
     pub fn rebuild(world: *World) *BrushSet {
         return @as(*BrushSet, @ptrCast(c.CCSG_World_Rebuild(@as(*c.CCSG_World, @ptrCast(world)))));
     }
+
+    pub fn queryPoint(world: *World, point: Vec3) *BrushList {
+        return @as(*BrushList, @ptrCast(c.CCSG_World_QueryPoint(
+            @as(*c.CCSG_World, @ptrCast(world)),
+            @as(*const c.CCSG_Vec3, @ptrCast(&point)),
+        )));
+    }
+    pub fn queryBox(world: *World, box: Box) *BrushList {
+        return @as(*BrushList, @ptrCast(c.CCSG_World_QueryBox(
+            @as(*c.CCSG_World, @ptrCast(world)),
+            @as(*const c.CCSG_Box, @ptrCast(&box)),
+        )));
+    }
+    pub fn queryRay(world: *World, ray: Ray) *RayHitList {
+        return @as(*RayHitList, @ptrCast(c.CCSG_World_QueryRay(
+            @as(*c.CCSG_World, @ptrCast(world)),
+            @as(*const c.CCSG_Ray, @ptrCast(&ray)),
+        )));
+    }
+    pub fn qeryFrustum(world: *World, view_projection: Mat4) *BrushList {
+        return @as(*BrushList, @ptrCast(c.CCSG_World_QueryFrustum(
+            @as(*c.CCSG_World, @ptrCast(world)),
+            @as(*const c.CCSG_Mat4, @ptrCast(&view_projection)),
+        )));
+    }
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -278,6 +312,14 @@ pub const Brush = opaque {
             return array[0..len];
         }
         return null;
+    }
+
+    pub fn getBox(brush: *const Brush) Box {
+        const c_box = c.CCSG_Brush_GetBox(@as(*const c.CCSG_Brush, @ptrCast(brush)));
+        return Box {
+            .min = c_box.min,
+            .max = c_box.max,
+        };
     }
 };
 

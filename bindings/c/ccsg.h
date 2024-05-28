@@ -210,7 +210,7 @@ CCSG_Brush_GetTime(const CCSG_Brush *brush);
 int
 CCSG_Brush_GetUid(const CCSG_Brush *brush);
 
-CCSG_Box*
+CCSG_Box
 CCSG_Brush_GetBox(const CCSG_Brush *brush);
 
 void*

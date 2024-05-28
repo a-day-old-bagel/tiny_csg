@@ -2,7 +2,7 @@
 
 This fork adds Zig bindings, and by extension, C bindings.
 
-The most recent Zig version known to compile with these bindings is 0.12.0-dev.3439+31a7f22b8.
+The most recent Zig version known to compile with these bindings is 0.13.0-dev.267+793f820b3.
 
 Additionally, some minor macro magic was attempted to allow for custom allocators in the existing C++ code.
 

@@ -384,8 +384,14 @@ CCSG_Brush_GetTime(const CCSG_Brush *brush) { return toCpp(brush)->get_time(); }
 int
 CCSG_Brush_GetUid(const CCSG_Brush *brush) { return toCpp(brush)->get_uid(); }
 
-CCSG_Box*
-CCSG_Brush_GetBox(const CCSG_Brush *brush) { return toC(new csg::box_t(toCpp(brush)->get_box())); }
+CCSG_Box
+CCSG_Brush_GetBox(const CCSG_Brush *brush) {
+    auto box = toCpp(brush)->get_box();
+    return CCSG_Box {
+        { box.min.x, box.min.y, box.min.z },
+        { box.max.x, box.max.y, box.max.z },
+    };
+}
 
 void*
 CCSG_Brush_GetUserData(const CCSG_Brush *brush) { return std::any_cast<void*>(toCpp(brush)->userdata); }
