@@ -243,6 +243,9 @@ CCSG_FaceVec_GetPtr(const CCSG_FaceVec *vec, const CCSG_Face **outArray);
 CCSG_TriangleVec* // Returns a pointer to copied memory that will be owned and freed by the caller.
 CCSG_Triangulate(const CCSG_Fragment *fragment);
 
+size_t // Return value is length of array
+CCSG_PlaneVec_GetPtr(const CCSG_PlaneVec *vec, const CCSG_Plane **outArray);
+
 //--------------------------------------------------------------------------------------------------
 #ifdef __cplusplus
 }

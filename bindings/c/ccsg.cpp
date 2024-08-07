@@ -458,3 +458,13 @@ CCSG_Triangulate(const CCSG_Fragment *fragment) {
 #   endif
     return toC(triangle_vec);
 }
+
+size_t
+CCSG_PlaneVec_GetPtr(const CCSG_PlaneVec *vec, const CCSG_Plane **out_array) {
+    if (toCpp(vec)->empty()) {
+        (*out_array) = nullptr;
+        return 0;
+    }
+    (*out_array) = toC(toCpp(vec)->data());
+    return toCpp(vec)->size();
+}

@@ -297,6 +297,16 @@ pub const Brush = opaque {
         );
     }
 
+    pub fn getPlanes(brush: *const Brush) ?[]const Plane {
+        const vec = c.CCSG_Brush_GetPlanes(@as(*const c.CCSG_Brush, @ptrCast(brush))) orelse return null;
+        var ptr: [*c]Plane = null;
+        const len = c.CCSG_PlaneVec_GetPtr(vec, @as([*c][*c] c.CCSG_Plane, @ptrCast(&ptr)));
+        if (ptr) |array| {
+            return array[0..len];
+        }
+        return null;
+    }
+
     pub fn setVolumeOperation(brush: *Brush, op: *const VolumeOperation) void {
         c.CCSG_Brush_SetVolumeOperation(
             @as(*c.CCSG_Brush, @ptrCast(brush)),
