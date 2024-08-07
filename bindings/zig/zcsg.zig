@@ -331,6 +331,14 @@ pub const Brush = opaque {
             .max = c_box.max,
         };
     }
+
+    pub fn getUserData(brush: *const Brush) ?*anyopaque {
+        return c.CCSG_Brush_GetUserData(@as(*const c.CCSG_Brush, @ptrCast(brush)));
+    }
+
+    pub fn setUserData(brush: *Brush, data: ?*anyopaque) void {
+        c.CCSG_Brush_SetUserData(@as(*c.CCSG_Brush, @ptrCast(brush)), data);
+    }
 };
 
 //--------------------------------------------------------------------------------------------------
